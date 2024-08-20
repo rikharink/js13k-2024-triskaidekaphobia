@@ -5,7 +5,7 @@ import { generateTextureFromText } from '../textures/textures';
 import { UIElement } from './ui-element';
 import { Texture } from '../textures/texture';
 import { rgbaString, RgbColor } from '../math/color';
-import { BASE01, BASE02, BASE05, BASE07, NORMALIZED_BASE02, NORMALIZED_BASE07 } from '../palette';
+import { BASE01, BASE02, BASE05, BASE07 } from '../palette';
 
 type ButtonClickHandler = (btn: IButton) => void;
 
