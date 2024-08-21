@@ -103,6 +103,32 @@
           }
         });
 
+        window.addEventListener('dblclick', (e) => {
+          let [shapes, start, goal] = parseValues();
+          for (let i = 0; i < shapes.length; i++) {
+            let shape = shapes[i];
+            let spline = shape.spline;
+            for (let j = 0; j < spline.length; j++) {
+              if (isPointOnBezier([mouseX, mouseY], spline[j], 5)) {
+              }
+            }
+          }
+        });
+
+        window.addEventListener('wheel', (e) => {
+          if (isDraggingAnchor) {
+            let [shapes] = parseValues();
+            let shape = shapes[shapeDraggingIndex];
+            let delta = e.wheelDelta > 0 ? 0.05 : -0.05;
+            shape.tension += delta;
+            shape.tension = parseFloat(shape.tension.toFixed(2));
+            document.getElementById('hole').value = JSON.stringify(
+              shapes.map((shape) => [shape.tension, ...shape.points]),
+            );
+            updateHole(ctx);
+          }
+        });
+
         window.addEventListener('mouseup', () => {
           isDraggingAnchor = false;
           isDraggingStart = false;
@@ -112,7 +138,6 @@
         });
 
         window.addEventListener('mousemove', (e) => {
-          let shouldUpdate = false;
           let rect = canvas.getBoundingClientRect();
           mouseX = e.clientX - rect.left;
           mouseY = e.clientY - rect.top;
@@ -125,26 +150,21 @@
             document.getElementById('hole').value = JSON.stringify(
               shapes.map((shape) => [shape.tension, ...shape.points]),
             );
-            shouldUpdate = true;
           }
 
           if (isDraggingStart) {
             start[0] = Math.round(mouseX);
             start[1] = Math.round(mouseY);
             document.getElementById('start').value = `[${start[0]},${start[1]}]`;
-            shouldUpdate = true;
           }
 
           if (isDraggingGoal) {
             goal[0] = Math.round(mouseX);
             goal[1] = Math.round(mouseY);
             document.getElementById('goal').value = `[${goal[0]},${goal[1]}]`;
-            shouldUpdate = true;
           }
 
-          if (shouldUpdate) {
-            updateHole(ctx);
-          }
+          updateHole(ctx);
         });
 
         window.addEventListener('mousedown', (e) => {
@@ -177,6 +197,31 @@
 
         updateHole(ctx);
       };
+
+      function isPointOnBezier(point, bezierCurve, epsilon = 0.001) {
+        function bezierCoordinate(t, p0, p1, p2, p3) {
+          return (
+            Math.pow(1 - t, 3) * p0 +
+            3 * Math.pow(1 - t, 2) * t * p1 +
+            3 * (1 - t) * Math.pow(t, 2) * p2 +
+            Math.pow(t, 3) * p3
+          );
+        }
+
+        const [x0, y0, x1, y1, x2, y2, x3, y3] = bezierCurve;
+        const [x, y] = point;
+
+        for (let t = 0; t <= 1; t += 0.001) {
+          const xCurve = bezierCoordinate(t, x0, x1, x2, x3);
+          const yCurve = bezierCoordinate(t, y0, y1, y2, y3);
+
+          if (Math.abs(xCurve - x) < epsilon && Math.abs(yCurve - y) < epsilon) {
+            return true;
+          }
+        }
+
+        return false;
+      }
 
       function pointInCircle(point, circle) {
         const dist = distance(point, circle.position);
@@ -213,7 +258,8 @@
         ctx.fillRect(0, 0, width, height);
 
         ctx.strokeStyle = 'black';
-        for (let shape of shapes) {
+        for (let i = 0; i < shapes.length; i++) {
+          let shape = shapes[i];
           let spline = shape.spline;
           drawSpline(ctx, spline);
           ctx.fillStyle = 'black';
