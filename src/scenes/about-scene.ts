@@ -35,11 +35,11 @@ export class AboutScene implements Scene {
     this.sceneManager = sceneManager;
     this.resourceManager = resourceManger;
     const about = new StackLayout(16);
-    about.add(new Label('About <TITLE>', 72, Settings.fontFamily, BASE05, [0, 0]));
+    about.add(new Label('About Triskaidekatrypophobia', 72, Settings.fontFamily, BASE05, [0, 0]));
     about.add(
       new Paragraph(
         [640, 480],
-        '<TITLE> is a game created by @rikharink for JS13K 2024.',
+        'Triskaidekatrypophobia is a game created by @rikharink for JS13K 2024.',
         32,
         Settings.fontFamily,
         BASE05,

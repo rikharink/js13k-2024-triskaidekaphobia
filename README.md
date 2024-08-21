@@ -1,4 +1,4 @@
-# JS13K 2024 - Triskaidekaphobia
+# JS13K 2024 - Triskaidekatrypophobia
 
 ## Run development server
 

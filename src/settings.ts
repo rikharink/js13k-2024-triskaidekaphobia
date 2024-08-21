@@ -9,5 +9,5 @@ export const Settings = {
   maxTranslationalShake: 25,
   seed: 1337,
   timeScale: 1,
-  fontFamily: "'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L', P052, serif",
+  fontFamily: "ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT', 'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif",
 };

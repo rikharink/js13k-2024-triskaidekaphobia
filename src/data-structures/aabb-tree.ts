@@ -1,4 +1,4 @@
-//https://www.azurefromthetrenches.com/introductory-guide-to-aabb-tree-collision-detection/
+// https://www.azurefromthetrenches.com/introductory-guide-to-aabb-tree-collision-detection/
 
 import { AABB, intersects } from '../math/geometry/aabb';
 

@@ -12,7 +12,7 @@ import { Label } from '../ui/label';
 import { Orientation, StackLayout } from '../ui/stack-layout';
 import { UIElement } from '../ui/ui-element';
 import { AboutScene } from './about-scene';
-import { BaseScene } from './base-scene';
+import { GameScene } from './game-scene';
 import { Background, onPush, Scene } from './scene';
 import { SettingsScene } from './settings-scene';
 
@@ -42,7 +42,7 @@ export class MainMenuScene implements Scene {
     const buttonSize: Vector2 = [176, 50];
 
     const play = new Button('play', 32, [0, 0], buttonSize, (btn) =>
-      this.shakeAndPush(btn, new BaseScene(sceneManager, resourceManger), 0.7, 200),
+      this.shakeAndPush(btn, new GameScene(sceneManager, resourceManger), 0.7, 200),
     );
     const settings = new Button('settings', 32, [0, 0], buttonSize, (btn) =>
       this.shakeAndPush(btn, new SettingsScene(sceneManager, resourceManger), 0.7, 200),
@@ -52,8 +52,8 @@ export class MainMenuScene implements Scene {
       this.shakeAndPush(btn, new AboutScene(sceneManager, resourceManger), 0.7, 200),
     );
 
-    menu.add(new Label('<TITLE>', 72, Settings.fontFamily, BASE05, [0, 0]));
-    menu.add(new Label('A JS13K 2024 GAME BY RIK HARINK', 32, Settings.fontFamily, BASE05, [0, 0]));
+    menu.add(new Label('Triskaidekatrypophobia', 72, Settings.fontFamily, BASE05, [0, 0]));
+    menu.add(new Label('the fear of hole thirteen', 32, Settings.fontFamily, BASE05, [0, 0]));
     menu.add(play);
     menu.add(about);
     menu.add(settings);

@@ -33,3 +33,23 @@ export function merge(a: AABB, b: AABB): AABB {
     max: [Math.max(a.max[0], b.max[0]), Math.max(a.max[1], b.max[1])],
   };
 }
+
+export function fromPoints(points: Vector2[]): AABB {
+  let min: Vector2 = [Infinity, Infinity];
+  let max: Vector2 = [-Infinity, -Infinity];
+  for (const point of points) {
+    min = [Math.min(min[0], point[0]), Math.min(min[1], point[1])];
+    max = [Math.max(max[0], point[0]), Math.max(max[1], point[1])];
+  }
+  return { min, max };
+}
+
+export function fromFlatPoints(points: number[]): AABB {
+  let min: Vector2 = [Infinity, Infinity];
+  let max: Vector2 = [-Infinity, -Infinity];
+  for (let i = 0; i < points.length; i += 2) {
+    min = [Math.min(min[0], points[i]), Math.min(min[1], points[i + 1])];
+    max = [Math.max(max[0], points[i]), Math.max(max[1], points[i + 1])];
+  }
+  return { min, max };
+}

@@ -20,7 +20,7 @@ import { MainMenuScene } from './scenes/main-menu-scene';
 import { TTTexture } from './textures/ttt';
 import { SettingsScene } from './scenes/settings-scene';
 import { AboutScene } from './scenes/about-scene';
-import { BaseScene } from './scenes/base-scene';
+import { GameScene } from './scenes/game-scene';
 
 let lil;
 let gui: GUI;
@@ -76,7 +76,7 @@ new ResourceManagerBuilder()
     rm.addScene('main', new MainMenuScene(sceneManager, resourceManager))
       .addScene('settings', new SettingsScene(sceneManager, resourceManager))
       .addScene('about', new AboutScene(sceneManager, resourceManager))
-      .addScene('game', new BaseScene(sceneManager, resourceManager));
+      .addScene('game', new GameScene(sceneManager, resourceManager));
 
     rm.addPostEffect('cc', new ColorCorrection(gl, resourceManager)).addPostEffect(
       'pt',

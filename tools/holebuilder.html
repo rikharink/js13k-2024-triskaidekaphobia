@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOLE BUILDER</title>
+    <style>
+      body {
+        background: ghostwhite;
+      }
+
+      .design {
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <div class="input">
+        <label for="points">Points:</label>
+        <input type="text" id="points" value="[0, 150, 100, 150, 100, 250, 0, 250]" />
+      </div>
+      <div class="input">
+        <label for="tension">Tension:</label>
+        <input type="text" id="tension" value="0.2" />
+      </div>
+      <div class="input">
+        <label for="scale">Scale:</label>
+        <input type="text" id="scale" value="1" />
+      </div>
+    </div>
+    <div class="design">
+      <canvas id="g"></canvas>
+    </div>
+    <script>
+      window.onload = () => {
+        const canvas = document.getElementById('g');
+        const ctx = canvas.getContext('2d');
+        console.log(ctx);
+        ctx.strokeStyle = 'black';
+        ctx.strokeWidth = 4;
+
+        document.getElementById('points').oninput = () => updateHole(ctx);
+        document.getElementById('tension').oninput = () => updateHole(ctx);
+        document.getElementById('scale').oninput = () => updateHole(ctx);
+
+        updateHole(ctx);
+      };
+
+      function updateHole(ctx) {
+        try {
+          const points = JSON.parse(document.getElementById('points').value);
+          const tension = parseFloat(document.getElementById('tension').value);
+          const sc = parseFloat(document.getElementById('scale').value);
+          let spline = normalizeSpline(ctx, getSpline(points, tension));
+          scale(spline, spline, sc);
+          let [width, height] = calculateCanvasSize(ctx, spline);
+          ctx.canvas.width = width;
+          ctx.canvas.height = height;
+          drawSpline(ctx, spline);
+        } catch (e) {
+          return;
+        }
+      }
+
+      function scale(out, spline, scale) {
+        for (let i = 0; i < spline.length; i++) {
+          for (let j = 0; j < 8; j++) {
+            out[i][j] = spline[i][j] * scale;
+          }
+        }
+        return out;
+      }
+
+      function minMaxSpline(spline) {
+        let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+        for (let i = 0; i < spline.length; i++) {
+          let [minX2, minY2, maxX2, maxY2] = cubicBezierMinMax(spline[i]);
+          minX = Math.min(minX, minX2);
+          minY = Math.min(minY, minY2);
+          maxX = Math.max(maxX, maxX2);
+          maxY = Math.max(maxY, maxY2);
+        }
+        return [minX, minY, maxX, maxY];
+      }
+
+      function calculateCanvasSize(ctx, spline) {
+        const [minX, minY, maxX, maxY] = minMaxSpline(spline);
+        return [maxX + ctx.strokeWidth, maxY + ctx.strokeWidth];
+      }
+
+      function normalizeSpline(ctx, spline) {
+        const [minX, minY, maxX, maxY] = minMaxSpline(spline);
+        for (let i = 0; i < spline.length; i++) {
+          for (let j = 0; j < 8; j += 2) {
+            spline[i][j] -= minX;
+            spline[i][j] += ctx.strokeWidth / 2;
+            spline[i][j + 1] -= minY;
+            spline[i][j + 1] += ctx.strokeWidth / 2;
+          }
+        }
+        return spline;
+      }
+
+      function drawSpline(ctx, spline) {
+        for (let i = 0; i < spline.length; i++) {
+          ctx.beginPath();
+          ctx.moveTo(spline[i][0], spline[i][1]);
+          ctx.bezierCurveTo(spline[i][2], spline[i][3], spline[i][4], spline[i][5], spline[i][6], spline[i][7]);
+          ctx.stroke();
+          ctx.closePath();
+        }
+      }
+
+      function getSpline(pts, t) {
+        let cp = [];
+        let beziers = [];
+        let n = pts.length;
+        pts.push(pts[0], pts[1], pts[2], pts[3]);
+        pts.unshift(pts[n - 1]);
+        pts.unshift(pts[n - 1]);
+        for (let i = 0; i < n; i += 2) {
+          cp = cp.concat(getControlPoints(pts[i], pts[i + 1], pts[i + 2], pts[i + 3], pts[i + 4], pts[i + 5], t));
+        }
+        cp = cp.concat(cp[0], cp[1]);
+        for (let i = 2; i < n + 2; i += 2) {
+          beziers.push([
+            pts[i],
+            pts[i + 1],
+            cp[2 * i - 2],
+            cp[2 * i - 1],
+            cp[2 * i],
+            cp[2 * i + 1],
+            pts[i + 2],
+            pts[i + 3],
+          ]);
+        }
+        return beziers;
+      }
+
+      function getControlPoints(x0, y0, x1, y1, x2, y2, t) {
+        const d01 = Math.hypot(x1 - x0, y1 - y0);
+        const d12 = Math.hypot(x2 - x1, y2 - y1);
+        const fa = (t * d01) / (d01 + d12);
+        const fb = t - fa;
+        const p1x = x1 + fa * (x0 - x2);
+        const p1y = y1 + fa * (y0 - y2);
+        const p2x = x1 - fb * (x0 - x2);
+        const p2y = y1 - fb * (y0 - y2);
+        return [p1x, p1y, p2x, p2y];
+      }
+
+      function cubicBezierMinMax(bezier) {
+        let [x0, y0, x1, y1, x2, y2, x3, y3] = bezier;
+        let tArr = [],
+          xArr = [x0, x3],
+          yArr = [y0, y3],
+          a,
+          b,
+          c,
+          t,
+          t1,
+          t2,
+          b2ac,
+          sqrt_b2ac;
+        for (let i = 0; i < 2; ++i) {
+          if (i == 0) {
+            b = 6 * x0 - 12 * x1 + 6 * x2;
+            a = -3 * x0 + 9 * x1 - 9 * x2 + 3 * x3;
+            c = 3 * x1 - 3 * x0;
+          } else {
+            b = 6 * y0 - 12 * y1 + 6 * y2;
+            a = -3 * y0 + 9 * y1 - 9 * y2 + 3 * y3;
+            c = 3 * y1 - 3 * y0;
+          }
+          if (Math.abs(a) < 1e-12) {
+            if (Math.abs(b) < 1e-12) {
+              continue;
+            }
+            t = -c / b;
+            if (0 < t && t < 1) {
+              tArr.push(t);
+            }
+            continue;
+          }
+          b2ac = b * b - 4 * c * a;
+          if (b2ac < 0) {
+            if (Math.abs(b2ac) < 1e-12) {
+              t = -b / (2 * a);
+              if (0 < t && t < 1) {
+                tArr.push(t);
+              }
+            }
+            continue;
+          }
+          sqrt_b2ac = Math.sqrt(b2ac);
+          t1 = (-b + sqrt_b2ac) / (2 * a);
+          if (0 < t1 && t1 < 1) {
+            tArr.push(t1);
+          }
+          t2 = (-b - sqrt_b2ac) / (2 * a);
+          if (0 < t2 && t2 < 1) {
+            tArr.push(t2);
+          }
+        }
+
+        let j = tArr.length,
+          mt;
+        while (j--) {
+          t = tArr[j];
+          mt = 1 - t;
+          xArr[j] = mt * mt * mt * x0 + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * x3;
+          yArr[j] = mt * mt * mt * y0 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y3;
+        }
+        return [Math.min.apply(0, xArr), Math.min.apply(0, yArr), Math.max.apply(0, xArr), Math.max.apply(0, yArr)];
+      }
+    </script>
+  </body>
+</html>

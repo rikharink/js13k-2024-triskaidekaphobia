@@ -7,11 +7,12 @@ import { AABB } from '../math/geometry/aabb';
 import { Settings } from '../settings';
 import { SceneManager } from '../managers/scene-manager';
 import { NORMALIZED_BASE00 } from '../palette';
-import { StackLayout } from '../ui/stack-layout';
-import { GridLayout } from '../ui/grid-layout';
-import { ImageButton } from '../ui/button';
+import { Label } from '../ui/label';
+import { AbsoluteLayout } from '../ui/absolute-layout';
+import { getCurrentHole, State } from '../game/state';
+import { fixedIntegerDigits } from '../util/util';
 
-export class BaseScene implements Scene {
+export class GameScene implements Scene {
   public name = 'game';
   public bg: Background = { type: 'color', color: [...NORMALIZED_BASE00, 1] };
   public camera: Camera;
@@ -27,41 +28,20 @@ export class BaseScene implements Scene {
   public resourceManager: ResourceManager;
   public sceneManager: SceneManager;
 
-  private _ui: StackLayout;
-  private _grid: GridLayout;
+  private _ui: AbsoluteLayout;
+  private _currentHole: Label;
 
   public constructor(sceneManager: SceneManager, resourceManager: ResourceManager) {
     this.sceneManager = sceneManager;
     this.resourceManager = resourceManager;
     this.camera = new Camera([Settings.resolution[0], Settings.resolution[1]]);
     this.camera.followSpeed = [0.3, 0.3];
-    const grass = this.resourceManager.textures.get('grass')!;
-    const tomato = this.resourceManager.textures.get('tomato')!;
+    this._ui = new AbsoluteLayout();
 
-    this._ui = new StackLayout();
-    this._grid = new GridLayout([1000, 1000], 10, 10, (_row, _column, _element) => {
-      if (!_element) return;
+    this._currentHole = new Label(this.getHoleText(), 48, Settings.fontFamily, [255, 255, 255], [26, 26]);
 
-      if (_element.sprites[0].texture === grass) {
-        _element.sprites[0].texture = tomato;
-      } else {
-        _element.sprites[0].texture = grass;
-      }
-    });
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 10; x++) {
-        this._grid.add(
-          new ImageButton(grass, [0, 0], [100, 100], {
-            hoverColor: [1, 0, 0],
-          }),
-          x,
-          y,
-        );
-      }
-    }
+    this._ui.add(this._currentHole);
 
-    this._ui.add(this._grid);
-    this._ui.center(this.camera);
     this.sprites.push(...this._ui.sprites);
   }
 
@@ -74,10 +54,17 @@ export class BaseScene implements Scene {
   }
 
   public variableTick(): void {
+    this._ui.tick();
     this.trauma -= this.traumaDampening;
     this.trauma = clamp(0, 1, this.trauma);
-    this._ui.tick();
   }
 
-  public fixedTick(): void {}
+  private getHoleText(): string {
+    const currentHole = getCurrentHole();
+    return `C${fixedIntegerDigits(State.course, 2)}H${fixedIntegerDigits(State.hole, 2)}P${fixedIntegerDigits(currentHole.par, 2)}`;
+  }
+
+  public fixedTick(): void {
+    this._currentHole.text = this.getHoleText();
+  }
 }
