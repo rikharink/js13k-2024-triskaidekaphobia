@@ -1,9 +1,8 @@
 import { Vector2 } from '../math/vector2';
 
 export interface Shape {
+  tension: number;
   points: Vector2[];
-  smoothness: number;
-  connected: boolean;
 }
 
 export interface Course {

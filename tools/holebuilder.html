@@ -12,64 +12,228 @@
       .design {
         padding: 16px;
       }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 800px;
+      }
+
+      .input {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+      }
+
+      .input > label {
+        width: 60px;
+        text-align: right;
+      }
+
+      .input > input {
+        width: 48px;
+      }
+
+      #hole {
+        width: 100%;
+      }
+
+      .coord {
+        width: 240px !important;
+      }
     </style>
   </head>
   <body>
     <div class="controls">
       <div class="input">
-        <label for="points">Points:</label>
-        <input type="text" id="points" value="[0, 150, 100, 150, 100, 250, 0, 250]" />
+        <label for="hole">hole:</label>
+        <input type="text" id="hole" value="[[0.2, 16, 16, 116, 16, 116, 116, 16, 116]]" />
+      </div>
+
+      <div class="input">
+        <label for="start">start:</label>
+        <input class="coord" type="text" id="start" value="[20,20]" />
       </div>
       <div class="input">
-        <label for="tension">Tension:</label>
-        <input type="text" id="tension" value="0.2" />
+        <label for="goal">goal:</label>
+        <input class="coord" type="text" id="goal" value="[90,90]" />
       </div>
       <div class="input">
-        <label for="scale">Scale:</label>
-        <input type="text" id="scale" value="1" />
+        <label for="tension">par:</label>
+        <input type="number" id="tension" value="3" step="1" />
       </div>
     </div>
     <div class="design">
       <canvas id="g"></canvas>
     </div>
     <script>
+      const GOAL_SIZE = 5;
+      const ANCHOR_SIZE = 5;
+      var mouseX = 0;
+      var mouseY = 0;
+      var isDraggingAnchor = false;
+      var isDraggingStart = false;
+      var isDraggingGoal = false;
+      var shapeDraggingIndex = -1;
+      var anchorDraggingIndex = -1;
+
       window.onload = () => {
         const canvas = document.getElementById('g');
         const ctx = canvas.getContext('2d');
-        console.log(ctx);
         ctx.strokeStyle = 'black';
         ctx.strokeWidth = 4;
 
-        document.getElementById('points').oninput = () => updateHole(ctx);
-        document.getElementById('tension').oninput = () => updateHole(ctx);
-        document.getElementById('scale').oninput = () => updateHole(ctx);
+        let inputs = document.querySelectorAll('input');
+        for (let i = 0; i < inputs.length; i++) {
+          inputs[i].addEventListener('input', () => updateHole(ctx));
+        }
+
+        window.addEventListener('keyup', (e) => {
+          if (e.key === 'n') {
+            let [shapes, start, goal] = parseValues();
+            shapes.push({
+              tension: 0.0,
+              points: [10, 10, 60, 10, 60, 60, 10, 60],
+            });
+            document.getElementById('hole').value = JSON.stringify(
+              shapes.map((shape) => [shape.tension, ...shape.points]),
+            );
+            updateHole(ctx);
+          }
+        });
+
+        window.addEventListener('mouseup', () => {
+          isDraggingAnchor = false;
+          isDraggingStart = false;
+          isDraggingGoal = false;
+          anchorDraggingIndex = -1;
+          shapeDraggingIndex = -1;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          let shouldUpdate = false;
+          let rect = canvas.getBoundingClientRect();
+          mouseX = e.clientX - rect.left;
+          mouseY = e.clientY - rect.top;
+
+          let [shapes, start, goal] = parseValues();
+
+          if (isDraggingAnchor) {
+            shapes[shapeDraggingIndex].points[anchorDraggingIndex * 2] = Math.round(mouseX);
+            shapes[shapeDraggingIndex].points[anchorDraggingIndex * 2 + 1] = Math.round(mouseY);
+            document.getElementById('hole').value = JSON.stringify(
+              shapes.map((shape) => [shape.tension, ...shape.points]),
+            );
+            shouldUpdate = true;
+          }
+
+          if (isDraggingStart) {
+            start[0] = Math.round(mouseX);
+            start[1] = Math.round(mouseY);
+            document.getElementById('start').value = `[${start[0]},${start[1]}]`;
+            shouldUpdate = true;
+          }
+
+          if (isDraggingGoal) {
+            goal[0] = Math.round(mouseX);
+            goal[1] = Math.round(mouseY);
+            document.getElementById('goal').value = `[${goal[0]},${goal[1]}]`;
+            shouldUpdate = true;
+          }
+
+          if (shouldUpdate) {
+            updateHole(ctx);
+          }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+          let [shapes, start, goal] = parseValues();
+
+          for (let i = 0; i < shapes.length; i++) {
+            let spline = shapes[i].spline;
+            let anchors = spline.map((p) => p.slice(0, 2));
+            for (let j = 0; j < anchors.length; j++) {
+              let anchor = anchors[j];
+              if (pointInCircle([mouseX, mouseY], { position: anchor, radius: ANCHOR_SIZE })) {
+                isDraggingAnchor = true;
+                shapeDraggingIndex = i;
+                anchorDraggingIndex = j;
+                return;
+              }
+            }
+          }
+
+          if (pointInCircle([mouseX, mouseY], { position: start, radius: GOAL_SIZE })) {
+            isDraggingStart = true;
+            return;
+          }
+
+          if (pointInCircle([mouseX, mouseY], { position: goal, radius: GOAL_SIZE })) {
+            isDraggingGoal = true;
+            return;
+          }
+        });
 
         updateHole(ctx);
       };
 
-      function updateHole(ctx) {
-        try {
-          const points = JSON.parse(document.getElementById('points').value);
-          const tension = parseFloat(document.getElementById('tension').value);
-          const sc = parseFloat(document.getElementById('scale').value);
-          let spline = normalizeSpline(ctx, getSpline(points, tension));
-          scale(spline, spline, sc);
-          let [width, height] = calculateCanvasSize(ctx, spline);
-          ctx.canvas.width = width;
-          ctx.canvas.height = height;
-          drawSpline(ctx, spline);
-        } catch (e) {
-          return;
-        }
+      function pointInCircle(point, circle) {
+        const dist = distance(point, circle.position);
+        return dist <= circle.radius;
       }
 
-      function scale(out, spline, scale) {
-        for (let i = 0; i < spline.length; i++) {
-          for (let j = 0; j < 8; j++) {
-            out[i][j] = spline[i][j] * scale;
+      function distance(p1, p2) {
+        return Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      }
+
+      function parseValues() {
+        let hole = JSON.parse(document.getElementById('hole').value);
+        let shapes = [];
+        for (let shape of hole) {
+          let tension = shape[0];
+          let points = shape.slice(1).map((p) => p);
+          let spline = getSpline(points, tension);
+          shapes.push({ tension: tension, points: points, spline: spline });
+        }
+        let start = JSON.parse(document.getElementById('start').value);
+        let goal = JSON.parse(document.getElementById('goal').value);
+        return [shapes, start, goal];
+      }
+
+      function updateHole(ctx) {
+        let [shapes, start, goal] = parseValues();
+        let [width, height] = shapes
+          .map((shape) => calculateCanvasSize(ctx, shape.spline))
+          .reduce((acc, val) => [Math.max(acc[0], val[0]), Math.max(acc[1], val[1])], [0, 0]);
+        ctx.canvas.width = width + ctx.strokeWidth;
+        ctx.canvas.height = height + ctx.strokeWidth;
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = 'black';
+        for (let shape of shapes) {
+          let spline = shape.spline;
+          drawSpline(ctx, spline);
+          ctx.fillStyle = 'black';
+          for (let i = 0; i < spline.length; i++) {
+            const x = spline[i][0];
+            const y = spline[i][1];
+            drawCircle(ctx, x, y, 5);
           }
         }
-        return out;
+        ctx.fillStyle = 'green';
+        drawCircle(ctx, start[0], start[1], GOAL_SIZE);
+        ctx.fillStyle = 'red';
+        drawCircle(ctx, goal[0], goal[1], GOAL_SIZE);
+      }
+
+      function drawCircle(ctx, x, y, r) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
       }
 
       function minMaxSpline(spline) {
@@ -89,19 +253,6 @@
         return [maxX + ctx.strokeWidth, maxY + ctx.strokeWidth];
       }
 
-      function normalizeSpline(ctx, spline) {
-        const [minX, minY, maxX, maxY] = minMaxSpline(spline);
-        for (let i = 0; i < spline.length; i++) {
-          for (let j = 0; j < 8; j += 2) {
-            spline[i][j] -= minX;
-            spline[i][j] += ctx.strokeWidth / 2;
-            spline[i][j + 1] -= minY;
-            spline[i][j + 1] += ctx.strokeWidth / 2;
-          }
-        }
-        return spline;
-      }
-
       function drawSpline(ctx, spline) {
         for (let i = 0; i < spline.length; i++) {
           ctx.beginPath();
@@ -112,7 +263,8 @@
         }
       }
 
-      function getSpline(pts, t) {
+      function getSpline(points, t) {
+        let pts = points.slice();
         let cp = [];
         let beziers = [];
         let n = pts.length;
