@@ -9,14 +9,14 @@ import { SceneManager } from '../managers/scene-manager';
 import { NORMALIZED_BASE00 } from '../palette';
 import { Label } from '../ui/label';
 import { AbsoluteLayout } from '../ui/absolute-layout';
-import { getCurrentHole, State } from '../game/state';
+import { getCurrentCourse, getCurrentHole, State } from '../game/state';
 import { fixedIntegerDigits } from '../util/util';
-import { Hole } from '../game/golf';
+import { Courses, Hole } from '../game/golf';
 import { calculateBoundingBox, drawSpline, getSpline, Spline } from '../math/geometry/spline';
 import { add, copy, reflect, scale, subtract, tangentToVector, Vector2 } from '../math/vector2';
 import { Circle, isCircleInAABB } from '../math/geometry/circle';
 import { drawCircle } from '../rendering/canvas';
-import { dbgCtx, getSpriteId, gl } from '../game';
+import { dbgCtx, getSpriteId, gl, keyboardManager } from '../game';
 import { generateTextureFromCanvas } from '../textures/textures';
 import { calculateBezierBoundingBox, calculateTangent, findBezierCircleIntersections } from '../math/geometry/bezier';
 import { clearDebug, drawAABB } from '../debug/debug';
@@ -77,6 +77,9 @@ export class GameScene implements Scene {
     this._ui.tick();
     this.trauma -= this.traumaDampening;
     this.trauma = clamp(0, 1, this.trauma);
+    if (keyboardManager.hasKeyUp('KeyN')) {
+      this.nextHole();
+    }
   }
 
   public fixedTick(): void {
@@ -143,6 +146,30 @@ export class GameScene implements Scene {
       add(this._ball.position, this._ball.position, this._currentHoleSprite.position);
     }
     add(this._ball.position, this._ball.position, this._ball.velocity);
+  }
+
+  private nextHole() {
+    const currentCourse = getCurrentCourse();
+    State.hole++;
+    if (State.hole == currentCourse.holes.length) {
+      State.hole = 0;
+      State.course++;
+      if (State.course == Courses.length) {
+        //TODO: winning screen instead of looping
+        State.course = 0;
+      }
+    }
+
+    this._currentHole = getCurrentHole();
+    this._currentHoleSprite = this.getCurrentHoleSprite();
+
+    let ballPosition: Vector2 = [0, 0];
+    copy(ballPosition, this._currentHole.start);
+    add(ballPosition, ballPosition, this._currentHoleSprite.position);
+    this._ball.position = ballPosition;
+
+    this.sprites = [];
+    this.sprites.push(this._currentHoleSprite, this._ball, ...this._ui.sprites);
   }
 
   private getCurrentHoleSprite(): Sprite {
@@ -217,6 +244,6 @@ export class GameScene implements Scene {
   }
 
   private getHoleText(): string {
-    return `C${fixedIntegerDigits(State.course, 2)}H${fixedIntegerDigits(State.hole, 2)}P${fixedIntegerDigits(this._currentHole.par, 2)}`;
+    return `C${fixedIntegerDigits(State.course + 1, 2)}H${fixedIntegerDigits(State.hole + 1, 2)}P${fixedIntegerDigits(this._currentHole.par, 2)}`;
   }
 }

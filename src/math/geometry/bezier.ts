@@ -57,7 +57,6 @@ export function findBezierCircleIntersections(
     const dy = yCurve - cy;
     const distanceSquared = dx * dx + dy * dy;
     const difference = Math.abs(distanceSquared - r * r);
-    console.log(difference);
 
     if (difference < epsilon) {
       intersections.push([xCurve, yCurve, t]);

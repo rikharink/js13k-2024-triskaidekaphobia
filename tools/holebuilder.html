@@ -45,6 +45,18 @@
     </style>
   </head>
   <body>
+    <div class="help">
+      <article>
+        <h1>Hole Builder</h1>
+        <ul>
+          <li>drag and drop points to move them</li>
+          <li>double click on a line to add a point</li>
+          <li>middle mouse button click on a point to remove the point</li>
+          <li>scroll up/down to increase/decrease the tension</li>
+          <li>press 'n' to add a new shape at the point of your cursor</li>
+        </ul>
+      </article>
+    </div>
     <div class="controls">
       <div class="input">
         <label for="hole">hole:</label>
@@ -92,9 +104,10 @@
         window.addEventListener('keyup', (e) => {
           if (e.key === 'n') {
             let [shapes, start, goal] = parseValues();
+
             shapes.push({
               tension: 0.0,
-              points: [10, 10, 60, 10, 60, 60, 10, 60],
+              points: [mouseX, mouseY, mouseX + 50, mouseY, mouseX + 50, mouseY + 50, mouseX, mouseY + 50],
             });
             document.getElementById('hole').value = JSON.stringify(
               shapes.map((shape) => [shape.tension, ...shape.points]),
@@ -139,12 +152,32 @@
           }
         });
 
-        window.addEventListener('mouseup', () => {
-          isDraggingAnchor = false;
-          isDraggingStart = false;
-          isDraggingGoal = false;
-          anchorDraggingIndex = -1;
-          shapeDraggingIndex = -1;
+        window.addEventListener('mouseup', (e) => {
+          if (e.button === 0) {
+            isDraggingAnchor = false;
+            isDraggingStart = false;
+            isDraggingGoal = false;
+            anchorDraggingIndex = -1;
+            shapeDraggingIndex = -1;
+          }
+
+          if (e.button === 1) {
+            let [shapes, start, goal] = parseValues();
+            for (let i = 0; i < shapes.length; i++) {
+              let spline = shapes[i].spline;
+              let anchors = spline.map((p) => p.slice(0, 2));
+              for (let j = 0; j < anchors.length; j++) {
+                let anchor = anchors[j];
+                if (pointInCircle([mouseX, mouseY], { position: anchor, radius: ANCHOR_SIZE })) {
+                  shapes[i].points.splice(j * 2, 2);
+                  document.getElementById('hole').value = JSON.stringify(
+                    shapes.map((shape) => [shape.tension, ...shape.points]),
+                  );
+                  updateHole(ctx);
+                }
+              }
+            }
+          }
         });
 
         window.addEventListener('mousemove', (e) => {
@@ -178,6 +211,8 @@
         });
 
         window.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+
           let [shapes, start, goal] = parseValues();
 
           for (let i = 0; i < shapes.length; i++) {

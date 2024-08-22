@@ -1,5 +1,5 @@
 import { Vector2 } from '../math/vector2';
-import { Courses, Hole } from './golf';
+import { Course, Courses, Hole } from './golf';
 
 export interface GameState {
   course: number;
@@ -9,12 +9,16 @@ export interface GameState {
 }
 
 export const State: GameState = {
-  course: 1,
-  hole: 1,
+  course: 0,
+  hole: 0,
   shots: 0,
   ball: [0, 0],
 };
 
 export function getCurrentHole(): Hole {
-  return Courses[State.course - 1].holes[State.hole - 1];
+  return Courses[State.course].holes[State.hole];
+}
+
+export function getCurrentCourse(): Course {
+  return Courses[State.course];
 }
