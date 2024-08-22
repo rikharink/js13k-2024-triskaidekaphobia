@@ -1,3 +1,4 @@
+import { Radian } from '../../types';
 import { Vector2 } from '../vector2';
 import { AABB } from './aabb';
 import { Circle } from './circle';
@@ -44,7 +45,7 @@ export function findBezierCircleIntersections(
   epsilon = 0.001,
 ) {
   const [x0, y0, x1, y1, x2, y2, x3, y3] = bezier;
-  const [cx, cy] = circle.position;
+  let [cx, cy] = circle.position;
   const r = circle.radius;
   const intersections = [];
 
@@ -55,13 +56,22 @@ export function findBezierCircleIntersections(
     const dx = xCurve - cx;
     const dy = yCurve - cy;
     const distanceSquared = dx * dx + dy * dy;
+    const difference = Math.abs(distanceSquared - r * r);
+    console.log(difference);
 
-    if (Math.abs(distanceSquared - r * r) < epsilon) {
-      intersections.push([xCurve, yCurve]);
+    if (difference < epsilon) {
+      intersections.push([xCurve, yCurve, t]);
     }
   }
 
   return intersections;
+}
+
+export function calculateTangent(bezier: CubicBezier, t: number): Radian {
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = bezier;
+  const dx = bezierDerivative(t, x0, x1, x2, x3);
+  const dy = bezierDerivative(t, y0, y1, y2, y3);
+  return Math.atan2(dy, dx);
 }
 
 function cubicBezierExtrema(p0: number, p1: number, p2: number, p3: number) {
@@ -95,5 +105,14 @@ function cubicBezierExtrema(p0: number, p1: number, p2: number, p3: number) {
 function bezierCoordinate(t: number, p0: number, p1: number, p2: number, p3: number): number {
   return (
     Math.pow(1 - t, 3) * p0 + 3 * Math.pow(1 - t, 2) * t * p1 + 3 * (1 - t) * Math.pow(t, 2) * p2 + Math.pow(t, 3) * p3
+  );
+}
+
+function bezierDerivative(t: number, p0: number, p1: number, p2: number, p3: number): number {
+  return (
+    -3 * Math.pow(1 - t, 2) * p0 +
+    3 * Math.pow(1 - t, 2) * p1 +
+    6 * (1 - t) * t * (p2 - p1) +
+    3 * Math.pow(t, 2) * (p3 - p2)
   );
 }

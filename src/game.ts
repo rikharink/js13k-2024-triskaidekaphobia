@@ -33,17 +33,23 @@ if (import.meta.env.DEV) {
 }
 
 const app = document.getElementById('app')!;
-app.innerHTML = `
+if (process.env.NODE_ENV === 'development') {
+  app.innerHTML = `
 <canvas id=g width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
 <canvas id=dbg width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
 `;
+} else {
+  app.innerHTML = `<canvas id=g width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>`;
+}
+
 export const canvas = document.getElementById('g') as HTMLCanvasElement;
 export const gl = canvas.getContext('webgl2', {
   alpha: false,
 })!;
 
-export const dbg = document.getElementById('dbg') as HTMLCanvasElement;
-export const dbgCtx = dbg.getContext('2d')!;
+export const dbg =
+  process.env.NODE_ENV === 'development' ? (document.getElementById('dbg') as HTMLCanvasElement) : null;
+export const dbgCtx = process.env.NODE_ENV === 'development' ? dbg?.getContext('2d')! : null;
 
 export const keyboardManager = new KeyboardManager();
 export const pointerManager = new PointerManager(canvas);
@@ -66,11 +72,11 @@ new ResourceManagerBuilder()
   .addShader('sprite', spriteVert, spriteFrag)
   .addShader('post', postVert, postFrag)
   .addProceduralTexture('ball', (gl) => {
-    const canvas = new OffscreenCanvas(11, 11);
+    const canvas = new OffscreenCanvas(65, 65);
     const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = 'white';
-    drawCircle(ctx, { position: [5, 5], radius: 5 });
-    return generateTextureFromCanvas(gl, canvas, [10, 10]);
+    drawCircle(ctx, { position: [32, 32], radius: 32 });
+    return generateTextureFromCanvas(gl, canvas, [8, 8]);
   })
   .build(gl, sceneManager)
   .then((rm) => {
@@ -213,7 +219,9 @@ function resizeCanvas() {
   if (canvas.style.width !== sw || canvas.style.height !== sh) {
     canvas.style.width = sw;
     canvas.style.height = sh;
-    dbg.style.width = sw;
-    dbg.style.height = sh;
+    if (dbg !== null) {
+      dbg.style.width = sw;
+      dbg.style.height = sh;
+    }
   }
 }

@@ -23,6 +23,18 @@ export function toRectangle(aabb: AABB): Rectangle {
   };
 }
 
+export function grow(out: AABB, aabb: AABB, amount: Vector2): AABB {
+  subtract(out.min, aabb.min, amount);
+  add(out.max, aabb.max, amount);
+  return out;
+}
+
+export function shrink(out: AABB, aabb: AABB, amount: Vector2): AABB {
+  add(out.min, aabb.min, amount);
+  subtract(out.max, aabb.max, amount);
+  return out;
+}
+
 export function clone(aabb: AABB): AABB {
   return { min: [...aabb.min], max: [...aabb.max] };
 }

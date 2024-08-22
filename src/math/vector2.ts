@@ -142,6 +142,12 @@ export function angle(a: Vector2, b: Vector2): Radian {
   return Math.acos(dot(a, b) / (length(a) * length(b)));
 }
 
+export function tangentToVector(out: Vector2, r: Radian): Vector2 {
+  out[0] = Math.cos(r);
+  out[1] = Math.sin(r);
+  return out;
+}
+
 export function rotate(o: Vector2, a: Vector2, b: Vector2, r: Radian): Vector2 {
   //Translate point to the origin
   let p0 = a[0] - b[0],

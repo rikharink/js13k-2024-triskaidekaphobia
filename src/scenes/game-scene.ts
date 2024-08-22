@@ -3,7 +3,7 @@ import { clamp } from '../math/util';
 import { Sprite } from '../rendering/sprite';
 import { Background, onPush, Scene } from './scene';
 import { Camera } from '../rendering/camera';
-import { AABB, clone, merge } from '../math/geometry/aabb';
+import { AABB, clone, grow, merge } from '../math/geometry/aabb';
 import { Settings } from '../settings';
 import { SceneManager } from '../managers/scene-manager';
 import { NORMALIZED_BASE00 } from '../palette';
@@ -13,12 +13,12 @@ import { getCurrentHole, State } from '../game/state';
 import { fixedIntegerDigits } from '../util/util';
 import { Hole } from '../game/golf';
 import { calculateBoundingBox, drawSpline, getSpline, Spline } from '../math/geometry/spline';
-import { add, copy, scale, subtract, Vector2 } from '../math/vector2';
+import { add, copy, reflect, scale, subtract, tangentToVector, Vector2 } from '../math/vector2';
 import { Circle, isCircleInAABB } from '../math/geometry/circle';
 import { drawCircle } from '../rendering/canvas';
-import { getSpriteId, gl } from '../game';
+import { dbgCtx, getSpriteId, gl } from '../game';
 import { generateTextureFromCanvas } from '../textures/textures';
-import { calculateBezierBoundingBox, findBezierCircleIntersections } from '../math/geometry/bezier';
+import { calculateBezierBoundingBox, calculateTangent, findBezierCircleIntersections } from '../math/geometry/bezier';
 import { clearDebug, drawAABB } from '../debug/debug';
 
 export class GameScene implements Scene {
@@ -59,8 +59,8 @@ export class GameScene implements Scene {
     let ballPosition: Vector2 = [0, 0];
     copy(ballPosition, this._currentHole.start);
     add(ballPosition, ballPosition, this._currentHoleSprite.position);
-    this._ball = new Sprite(getSpriteId(), [10, 10], ballPosition, resourceManager.textures.get('ball')!);
-    this._ball.velocity = [1, 1];
+    this._ball = new Sprite(getSpriteId(), [8, 8], ballPosition, resourceManager.textures.get('ball')!);
+    this._ball.velocity = [4, 0];
 
     this.sprites.push(this._currentHoleSprite, this._ball, ...this._ui.sprites);
   }
@@ -90,8 +90,7 @@ export class GameScene implements Scene {
 
     const ballPosition: Vector2 = [0, 0];
     subtract(ballPosition, this._ball.position, this._currentHoleSprite.position);
-
-    const ball: Circle = { position: ballPosition, radius: 5 };
+    const ball: Circle = { position: ballPosition, radius: 4 };
 
     let isOutOfBounds = true;
 
@@ -103,29 +102,37 @@ export class GameScene implements Scene {
         continue;
       }
 
-      let debugAABB = clone(aabb);
-      add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
-      add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
-      drawAABB(debugAABB, 'green');
+      if (dbgCtx !== null) {
+        let debugAABB = clone(aabb);
+        add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
+        add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
+        drawAABB(debugAABB, 'green');
+      }
 
       isOutOfBounds = false;
 
       for (let bezier of spline) {
         let baabb = calculateBezierBoundingBox(bezier);
-
+        grow(baabb, baabb, [8, 8]);
         if (!isCircleInAABB(ball, baabb)) {
           continue;
         }
 
-        let debugAABB = clone(baabb);
-        add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
-        add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
-        drawAABB(debugAABB);
+        if (dbgCtx !== null) {
+          let debugAABB = clone(baabb);
+          add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
+          add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
+          drawAABB(debugAABB);
+        }
+
         // fine=grained collision detection
-        let intersections = findBezierCircleIntersections(bezier, ball);
+        let intersections = findBezierCircleIntersections(bezier, ball, 0.001, 2);
         if (intersections.length > 0) {
-          console.info('fine-grained collision hit', intersections);
-          this._ball.velocity = [0, 0];
+          reflect(
+            this._ball.velocity,
+            this._ball.velocity,
+            tangentToVector([0, 0], calculateTangent(bezier, intersections[0][2])),
+          );
         }
       }
     }
@@ -177,7 +184,11 @@ export class GameScene implements Scene {
     scale(this._currentHole.finish, this._currentHole.finish, scaleFactor);
     scale(this._currentHole.start, this._currentHole.start, scaleFactor);
 
-    this._currentHoleSplineBoundingBoxes = splines.map((spline) => calculateBoundingBox(spline));
+    this._currentHoleSplineBoundingBoxes = splines.map((spline) => {
+      let aabb = calculateBoundingBox(spline);
+      return grow(aabb, aabb, [linewidth * 10, linewidth * 10]);
+    });
+
     this._currentHoleSplines = splines;
 
     let canvas = new OffscreenCanvas(aabb.max[0], aabb.max[1]);
