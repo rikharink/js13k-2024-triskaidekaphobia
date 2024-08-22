@@ -24,6 +24,8 @@ jobs:
         run: pnpm install
       - name: build
         run: pnpm build
+      - name: copy-tools
+        run: cp -r ./tools ./dist/tools
       - uses: actions/upload-pages-artifact@v3
         name: upload pages artifact
         with:
