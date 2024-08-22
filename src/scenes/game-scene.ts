@@ -80,7 +80,9 @@ export class GameScene implements Scene {
   }
 
   public fixedTick(): void {
-    clearDebug();
+    if (dbgCtx !== null) {
+      clearDebug(dbgCtx);
+    }
 
     this._currentHoleLabel.text = this.getHoleText();
 
@@ -106,7 +108,7 @@ export class GameScene implements Scene {
         let debugAABB = clone(aabb);
         add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
         add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
-        drawAABB(debugAABB, 'green');
+        drawAABB(dbgCtx, debugAABB, 'green');
       }
 
       isOutOfBounds = false;
@@ -122,7 +124,7 @@ export class GameScene implements Scene {
           let debugAABB = clone(baabb);
           add(debugAABB.min, debugAABB.min, this._currentHoleSprite.position);
           add(debugAABB.max, debugAABB.max, this._currentHoleSprite.position);
-          drawAABB(debugAABB);
+          drawAABB(dbgCtx, debugAABB);
         }
 
         // fine=grained collision detection
