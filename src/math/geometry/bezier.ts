@@ -1,66 +1,99 @@
+import { Vector2 } from '../vector2';
+import { AABB } from './aabb';
+import { Circle } from './circle';
+
 export type CubicBezier = [number, number, number, number, number, number, number, number];
 
-export function calculateMinMax(bezier: CubicBezier): [number, number, number, number] {
-  let [x0, y0, x1, y1, x2, y2, x3, y3] = bezier;
-  let tArr = [],
-    xArr = [x0, x3],
-    yArr = [y0, y3],
-    a,
-    b,
-    c,
-    t,
-    t1,
-    t2,
-    b2ac,
-    sqrt_b2ac;
-  for (let i = 0; i < 2; ++i) {
-    if (i == 0) {
-      b = 6 * x0 - 12 * x1 + 6 * x2;
-      a = -3 * x0 + 9 * x1 - 9 * x2 + 3 * x3;
-      c = 3 * x1 - 3 * x0;
-    } else {
-      b = 6 * y0 - 12 * y1 + 6 * y2;
-      a = -3 * y0 + 9 * y1 - 9 * y2 + 3 * y3;
-      c = 3 * y1 - 3 * y0;
-    }
-    if (Math.abs(a) < 1e-12) {
-      if (Math.abs(b) < 1e-12) {
-        continue;
-      }
-      t = -c / b;
-      if (0 < t && t < 1) {
-        tArr.push(t);
-      }
-      continue;
-    }
-    b2ac = b * b - 4 * c * a;
-    if (b2ac < 0) {
-      if (Math.abs(b2ac) < 1e-12) {
-        t = -b / (2 * a);
-        if (0 < t && t < 1) {
-          tArr.push(t);
-        }
-      }
-      continue;
-    }
-    sqrt_b2ac = Math.sqrt(b2ac);
-    t1 = (-b + sqrt_b2ac) / (2 * a);
-    if (0 < t1 && t1 < 1) {
-      tArr.push(t1);
-    }
-    t2 = (-b - sqrt_b2ac) / (2 * a);
-    if (0 < t2 && t2 < 1) {
-      tArr.push(t2);
+export function calculateBezierBoundingBox(bezierCurve: CubicBezier): AABB {
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = bezierCurve;
+
+  const tx = cubicBezierExtrema(x0, x1, x2, x3);
+  const ty = cubicBezierExtrema(y0, y1, y2, y3);
+
+  const xValues = [x0, x3, ...tx.map((t) => bezierCoordinate(t, x0, x1, x2, x3))];
+  const yValues = [y0, y3, ...ty.map((t) => bezierCoordinate(t, y0, y1, y2, y3))];
+
+  const minX = Math.min(...xValues);
+  const minY = Math.min(...yValues);
+  const maxX = Math.max(...xValues);
+  const maxY = Math.max(...yValues);
+
+  return { min: [minX, minY], max: [maxX, maxY] };
+}
+
+export function isPointOnBezier(point: Vector2, bezierCurve: CubicBezier, epsilon = 0.001) {
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = bezierCurve;
+  const [x, y] = point;
+
+  for (let t = 0; t <= 1; t += 0.001) {
+    const xCurve = bezierCoordinate(t, x0, x1, x2, x3);
+    const yCurve = bezierCoordinate(t, y0, y1, y2, y3);
+
+    if (Math.abs(xCurve - x) < epsilon && Math.abs(yCurve - y) < epsilon) {
+      return true;
     }
   }
 
-  let j = tArr.length,
-    mt;
-  while (j--) {
-    t = tArr[j];
-    mt = 1 - t;
-    xArr[j] = mt * mt * mt * x0 + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * x3;
-    yArr[j] = mt * mt * mt * y0 + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * y3;
+  return false;
+}
+
+export function findBezierCircleIntersections(
+  bezier: CubicBezier,
+  circle: Circle,
+  discreteStepSize = 0.001,
+  epsilon = 0.001,
+) {
+  const [x0, y0, x1, y1, x2, y2, x3, y3] = bezier;
+  const [cx, cy] = circle.position;
+  const r = circle.radius;
+  const intersections = [];
+
+  for (let t = 0; t <= 1; t += discreteStepSize) {
+    const xCurve = bezierCoordinate(t, x0, x1, x2, x3);
+    const yCurve = bezierCoordinate(t, y0, y1, y2, y3);
+
+    const dx = xCurve - cx;
+    const dy = yCurve - cy;
+    const distanceSquared = dx * dx + dy * dy;
+
+    if (Math.abs(distanceSquared - r * r) < epsilon) {
+      intersections.push([xCurve, yCurve]);
+    }
   }
-  return [Math.min.apply(0, xArr), Math.min.apply(0, yArr), Math.max.apply(0, xArr), Math.max.apply(0, yArr)];
+
+  return intersections;
+}
+
+function cubicBezierExtrema(p0: number, p1: number, p2: number, p3: number) {
+  const a = 3 * (-p0 + 3 * p1 - 3 * p2 + p3);
+  const b = 6 * (p0 - 2 * p1 + p2);
+  const c = 3 * (p1 - p0);
+
+  const discriminant = b * b - 4 * a * c;
+
+  if (Math.abs(a) < 1e-8) {
+    // Handle linear or quadratic cases
+    if (Math.abs(b) > 1e-8) {
+      return [-c / b].filter((t) => t >= 0 && t <= 1);
+    }
+    return []; // Degenerate case: p0 == p1 == p2 == p3
+  }
+
+  if (discriminant < 0) {
+    return []; // No real roots
+  } else if (discriminant === 0) {
+    const t = -b / (2 * a);
+    return [t].filter((t) => t >= 0 && t <= 1);
+  } else {
+    const sqrtD = Math.sqrt(discriminant);
+    const t1 = (-b + sqrtD) / (2 * a);
+    const t2 = (-b - sqrtD) / (2 * a);
+    return [t1, t2].filter((t) => t >= 0 && t <= 1);
+  }
+}
+
+function bezierCoordinate(t: number, p0: number, p1: number, p2: number, p3: number): number {
+  return (
+    Math.pow(1 - t, 3) * p0 + 3 * Math.pow(1 - t, 2) * t * p1 + 3 * (1 - t) * Math.pow(t, 2) * p2 + Math.pow(t, 3) * p3
+  );
 }

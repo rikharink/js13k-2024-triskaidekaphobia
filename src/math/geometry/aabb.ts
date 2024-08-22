@@ -23,6 +23,10 @@ export function toRectangle(aabb: AABB): Rectangle {
   };
 }
 
+export function clone(aabb: AABB): AABB {
+  return { min: [...aabb.min], max: [...aabb.max] };
+}
+
 export function intersects(a: AABB, b: AABB): boolean {
   return a.max[0] > b.min[0] && a.min[0] < b.max[0] && a.max[1] > a.min[1] && a.min[1] < b.max[1];
 }

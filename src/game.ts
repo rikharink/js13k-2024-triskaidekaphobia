@@ -9,7 +9,6 @@ import { MainRenderer } from './rendering/main-renderer';
 import { Settings } from './settings';
 import { KeyboardManager } from './managers/keyboard-manager';
 import { PointerManager } from './managers/pointer-manager';
-import { GamepadManager } from './managers/gamepad-manager';
 import { AudioSystem } from './audio/audio-system';
 import { ResourceManager, ResourceManagerBuilder } from './managers/resource-manager';
 import { ColorCorrection } from './rendering/post-effects/color-correction';
@@ -17,10 +16,11 @@ import { Passthrough } from './rendering/post-effects/passthrough';
 import GUI from 'lil-gui';
 import { TAU } from './math/const';
 import { MainMenuScene } from './scenes/main-menu-scene';
-import { TTTexture } from './textures/ttt';
 import { SettingsScene } from './scenes/settings-scene';
 import { AboutScene } from './scenes/about-scene';
 import { GameScene } from './scenes/game-scene';
+import { drawCircle } from './rendering/canvas';
+import { generateTextureFromCanvas } from './textures/textures';
 
 let lil;
 let gui: GUI;
@@ -35,41 +35,43 @@ if (import.meta.env.DEV) {
 const app = document.getElementById('app')!;
 app.innerHTML = `
 <canvas id=g width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
+<canvas id=dbg width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
 `;
 export const canvas = document.getElementById('g') as HTMLCanvasElement;
 export const gl = canvas.getContext('webgl2', {
   alpha: false,
 })!;
 
+export const dbg = document.getElementById('dbg') as HTMLCanvasElement;
+export const dbgCtx = dbg.getContext('2d')!;
+
 export const keyboardManager = new KeyboardManager();
-export const gamepadManager = new GamepadManager();
 export const pointerManager = new PointerManager(canvas);
 const sceneManager = new SceneManager();
 
 let isPaused = false;
 
-export const rng = getRandom('JS13K2023');
+export const rng = getRandom('JS13K2024');
 
 export let gameTime = 0;
-let spriteId = 0;
 
+let spriteId = 0;
 export function getSpriteId(): number {
   return spriteId++;
 }
 
 export let resourceManager: ResourceManager;
 
-const nightshades: TTTexture[] = [
-  [32, 32, 0, 3, -6, 27, 65535, 0, 32, '🍆'],
-  [32, 32, 0, 3, -6, 27, 65535, 0, 32, '🍅'],
-  [32, 32, 0, 3, -6, 27, 65535, 0, 32, '🥔'],
-  [32, 32, 1583, 2, 36740, 2, 2, 65428, 3],
-];
-
 new ResourceManagerBuilder()
   .addShader('sprite', spriteVert, spriteFrag)
   .addShader('post', postVert, postFrag)
-  .addTTTTextures(['aubergine', 'tomato', 'potato', 'grass'], nightshades, gl)
+  .addProceduralTexture('ball', (gl) => {
+    const canvas = new OffscreenCanvas(11, 11);
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = 'white';
+    drawCircle(ctx, { position: [5, 5], radius: 5 });
+    return generateTextureFromCanvas(gl, canvas, [10, 10]);
+  })
   .build(gl, sceneManager)
   .then((rm) => {
     resourceManager = rm;
@@ -165,7 +167,6 @@ new ResourceManagerBuilder()
 
       sceneManager.currentScene.variableTick();
       keyboardManager.tick();
-      gamepadManager.tick();
       pointerManager.tick();
       _then = now;
       stats?.end();
@@ -212,5 +213,7 @@ function resizeCanvas() {
   if (canvas.style.width !== sw || canvas.style.height !== sh) {
     canvas.style.width = sw;
     canvas.style.height = sh;
+    dbg.style.width = sw;
+    dbg.style.height = sh;
   }
 }

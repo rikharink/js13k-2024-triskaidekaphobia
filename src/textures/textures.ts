@@ -85,7 +85,7 @@ interface TextOptions {
   fontFamily: string;
 }
 
-function textureFromCanvas(gl: WebGL2RenderingContext, canvas: OffscreenCanvas, size: Vector2): Texture {
+export function generateTextureFromCanvas(gl: WebGL2RenderingContext, canvas: OffscreenCanvas, size: Vector2): Texture {
   const texture = gl.createTexture()!;
   gl.pixelStorei(GL_UNPACK_FLIP_Y_WEBGL, true);
   gl.bindTexture(GL_TEXTURE_2D, texture);
@@ -123,7 +123,7 @@ export function generateTextureFromText(gl: WebGL2RenderingContext, text: string
   tctx.textBaseline = 'top';
   tctx.fillText(text, 0, 0);
 
-  return textureFromCanvas(gl, textCanvas, [width, height - 1]);
+  return generateTextureFromCanvas(gl, textCanvas, [width, height - 1]);
 }
 
 export function generateTextureFromParagraph(
@@ -161,7 +161,7 @@ export function generateTextureFromParagraph(
     const img = document.createElement('img');
     img.onload = () => {
       tctx2.drawImage(img, 0, 0);
-      const texture = textureFromCanvas(gl, textCanvas2, size);
+      const texture = generateTextureFromCanvas(gl, textCanvas2, size);
       resolve(texture);
     };
     img.onerror = (error) => reject(error);

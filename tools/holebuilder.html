@@ -111,10 +111,7 @@
             let spline = shape.spline;
             for (let j = 0; j < spline.length; j++) {
               if (isPointOnBezier([mouseX, mouseY], spline[j], 5)) {
-                let start = spline[j].slice(0, 2);
-                let end = spline[j].slice(6, 8);
-                let mid = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2];
-                shape.points.splice(j * 2 + 2, 0, mid[0], mid[1]);
+                shape.points.splice(j * 2 + 2, 0, mouseX, mouseY);
                 done = true;
               }
             }

@@ -1,4 +1,5 @@
-import { CubicBezier } from './bezier';
+import { AABB, merge } from './aabb';
+import { calculateBezierBoundingBox, CubicBezier } from './bezier';
 
 export type Spline = CubicBezier[];
 
@@ -55,6 +56,12 @@ export function getSpline(points: number[], tension: number, closed: boolean = t
     ]);
   }
   return beziers;
+}
+
+export function calculateBoundingBox(spline: Spline): AABB {
+  return spline
+    .map((bezier) => calculateBezierBoundingBox(bezier))
+    .reduce((acc: AABB, val: AABB) => merge(acc, val), { min: [Infinity, Infinity], max: [-Infinity, -Infinity] });
 }
 
 function getControlPoints(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, tension: number) {
