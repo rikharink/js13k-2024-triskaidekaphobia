@@ -1,3 +1,4 @@
+import { Tension } from '../../game/golf';
 import { AABB, merge } from './aabb';
 import { calculateBezierBoundingBox, CubicBezier } from './bezier';
 
@@ -22,7 +23,7 @@ export function drawSpline(ctx: OffscreenCanvasRenderingContext2D | CanvasRender
   }
 }
 
-export function getSpline(points: number[], tension: number, closed: boolean = true): Spline {
+export function getSpline(points: number[], tension: Tension, closed: boolean = true): Spline {
   let cp: number[] = [];
   let beziers: Spline = [];
   let n = points.length;
@@ -64,7 +65,7 @@ export function calculateBoundingBox(spline: Spline): AABB {
     .reduce((acc: AABB, val: AABB) => merge(acc, val), { min: [Infinity, Infinity], max: [-Infinity, -Infinity] });
 }
 
-function getControlPoints(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, tension: number) {
+function getControlPoints(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, tension: Tension) {
   const d01 = Math.hypot(x1 - x0, y1 - y0);
   const d12 = Math.hypot(x2 - x1, y2 - y1);
   const fa = (tension * d01) / (d01 + d12);

@@ -39,7 +39,7 @@ export function initShaderProgram(gl: WebGL2RenderingContext, vertexSource: stri
   gl.attachShader(program, fragmentShader);
   gl.linkProgram(program);
 
-  if (process.env.NODE_ENV === 'development' && !gl.getProgramParameter(program, GL_LINK_STATUS)) {
+  if (import.meta.env.DEV && !gl.getProgramParameter(program, GL_LINK_STATUS)) {
     console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
     return null;
   }
@@ -64,7 +64,7 @@ function loadShader(gl: WebGL2RenderingContext, type: number, source: string): W
   const shader = gl.createShader(type)!;
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
-  if (process.env.NODE_ENV === 'development' && !gl.getShaderParameter(shader, GL_COMPILE_STATUS)) {
+  if (import.meta.env.DEV && !gl.getShaderParameter(shader, GL_COMPILE_STATUS)) {
     console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
     gl.deleteShader(shader);
     return null;
@@ -111,7 +111,7 @@ export function createTexture(gl: WebGL2RenderingContext, size: Vector2): WebGLT
 //   canvasses: (HTMLCanvasElement | OffscreenCanvas)[],
 // ): TextureAtlas {
 //   let sizes = canvasses.map((c) => [c.width, c.height] as Vector2);
-  
+
 // }
 
 export function canvasToTexture(

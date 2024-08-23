@@ -1,7 +1,8 @@
 import { Vector2 } from '../math/vector2';
 
-//                   tension   x0      y0     x1      y1        x2 y2...
-export type Shape = [number, number, number, number, number, ...number[]];
+export type Tension = number;
+
+export type Shape = [Tension, ...number[]];
 
 export interface Course {
   holes: Hole[];

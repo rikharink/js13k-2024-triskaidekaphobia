@@ -15,9 +15,6 @@ import { ColorCorrection } from './rendering/post-effects/color-correction';
 import { Passthrough } from './rendering/post-effects/passthrough';
 import GUI from 'lil-gui';
 import { TAU } from './math/const';
-import { MainMenuScene } from './scenes/main-menu-scene';
-import { SettingsScene } from './scenes/settings-scene';
-import { AboutScene } from './scenes/about-scene';
 import { GameScene } from './scenes/game-scene';
 import { drawCircle } from './rendering/canvas';
 import { generateTextureFromCanvas } from './textures/textures';
@@ -33,7 +30,7 @@ if (import.meta.env.DEV) {
 }
 
 const app = document.getElementById('app')!;
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   app.innerHTML = `
 <canvas id=g width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
 <canvas id=dbg width=${Settings.resolution[0]} height=${Settings.resolution[1]}></canvas>
@@ -47,9 +44,8 @@ export const gl = canvas.getContext('webgl2', {
   alpha: false,
 })!;
 
-export const dbg =
-  process.env.NODE_ENV === 'development' ? (document.getElementById('dbg') as HTMLCanvasElement) : null;
-export const dbgCtx = process.env.NODE_ENV === 'development' ? dbg?.getContext('2d')! : null;
+export const dbg = import.meta.env.DEV ? (document.getElementById('dbg') as HTMLCanvasElement) : null;
+export const dbgCtx = import.meta.env.DEV ? dbg?.getContext('2d')! : null;
 
 export const keyboardManager = new KeyboardManager();
 export const pointerManager = new PointerManager(canvas);
@@ -81,10 +77,7 @@ new ResourceManagerBuilder()
   .build(gl, sceneManager)
   .then((rm) => {
     resourceManager = rm;
-    rm.addScene('main', new MainMenuScene(sceneManager, resourceManager))
-      .addScene('settings', new SettingsScene(sceneManager, resourceManager))
-      .addScene('about', new AboutScene(sceneManager, resourceManager))
-      .addScene('game', new GameScene(sceneManager, resourceManager));
+    rm.addScene('game', new GameScene(sceneManager, resourceManager));
 
     rm.addPostEffect('cc', new ColorCorrection(gl, resourceManager)).addPostEffect(
       'pt',
@@ -98,7 +91,7 @@ new ResourceManagerBuilder()
     if (scene) {
       sceneManager.pushScene(scene);
     } else {
-      sceneManager.pushScene(new MainMenuScene(sceneManager, resourceManager));
+      sceneManager.pushScene(new GameScene(sceneManager, resourceManager));
     }
     let stats: Stats | undefined = undefined;
     if (import.meta.env.DEV) {
