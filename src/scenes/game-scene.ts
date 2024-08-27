@@ -21,6 +21,9 @@ import { generateTextureFromCanvas } from '../textures/textures';
 import { calculateBezierBoundingBox, calculateTangent, findBezierCircleIntersections } from '../math/geometry/bezier';
 import { clearDebug, drawAABB } from '../debug/debug';
 
+//TODO: render all holes at once and move the camera between them
+//TODO: get rid of the scaling of the hole and instead scale the camera for less glitching?
+//TODO: same for moving the sprite to the center of the screen, just center the camera on the hole instead?
 export class GameScene implements Scene {
   public name = 'game';
   public bg: Background = { type: 'color', color: [...NORMALIZED_BASE00, 1] };
