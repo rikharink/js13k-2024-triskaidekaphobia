@@ -4,14 +4,14 @@ import { Course, Courses, Hole } from './golf';
 export interface GameState {
   course: number;
   hole: number;
-  shots: number;
+  shots: Map<number, number>;
   ball: Vector2;
 }
 
 export const State: GameState = {
   course: 0,
   hole: 0,
-  shots: 0,
+  shots: new Map(),
   ball: [0, 0],
 };
 

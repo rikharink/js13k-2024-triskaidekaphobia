@@ -84,8 +84,7 @@ export class LoaderScene implements Scene {
     ctx.fillRect(x, y, mw * s, mh);
   }
 
-  public fixedTick(): void {}
+  public fixedTick(dt: number): void {}
 
   public variableTick(): void {}
-  
 }

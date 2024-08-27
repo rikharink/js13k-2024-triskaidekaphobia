@@ -98,6 +98,9 @@ new ResourceManagerBuilder()
       const settings = gui.addFolder('settings');
       settings.add(Settings, 'fixedDeltaTime');
       settings.add(Settings, 'timeScale', 0, 1);
+      settings.add(Settings, 'friction', 0, 1, 0.01);
+      settings.add(Settings, 'bounceFriction', 0, 1, 0.01);
+      settings.add(Settings, 'velocityMultiplier', 0, 1, 0.001);
 
       const pfx = gui.addFolder('postEffects');
       pfx.add(resourceManager.getPostEffect('cc'), 'isEnabled').name('cc enabled');
@@ -150,7 +153,7 @@ new ResourceManagerBuilder()
       _accumulator += dt;
       while (_accumulator >= Settings.fixedDeltaTime) {
         //FIXED STEP
-        sceneManager.currentScene.fixedTick();
+        sceneManager.currentScene.fixedTick(Settings.fixedDeltaTime * Settings.timeScale);
         sceneManager.currentScene.camera.tick(
           gameTime,
           sceneManager.currentScene.trauma * sceneManager.currentScene.trauma,

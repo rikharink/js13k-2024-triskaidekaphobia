@@ -9,5 +9,9 @@ export const Settings = {
   maxTranslationalShake: 25,
   seed: 1337,
   timeScale: 1,
-  fontFamily: "ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT', 'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif",
+  friction: 0.99,
+  bounceFriction: 0.9,
+  velocityMultiplier: 0.005,
+  fontFamily:
+    "ui-rounded, 'Hiragino Maru Gothic ProN', Quicksand, Comfortaa, Manjari, 'Arial Rounded MT', 'Arial Rounded MT Bold', Calibri, source-sans-pro, sans-serif",
 };

@@ -60,7 +60,7 @@
     <div class="controls">
       <div class="input">
         <label for="hole">hole:</label>
-        <input type="text" id="hole" value="[[0.2, 16, 16, 116, 16, 116, 116, 16, 116]]" />
+        <input type="text" id="hole" value="[[0.2, 0, 16, 16, 116, 16, 116, 116, 16, 116]]" />
       </div>
 
       <div class="input">
@@ -107,10 +107,11 @@
 
             shapes.push({
               tension: 0.0,
+              type: 0,
               points: [mouseX, mouseY, mouseX + 50, mouseY, mouseX + 50, mouseY + 50, mouseX, mouseY + 50],
             });
             document.getElementById('hole').value = JSON.stringify(
-              shapes.map((shape) => [shape.tension, ...shape.points]),
+              shapes.map((shape) => [shape.tension, shape.type, ...shape.points]),
             );
             updateHole(ctx);
           }
@@ -130,7 +131,7 @@
             }
             if (done) {
               document.getElementById('hole').value = JSON.stringify(
-                shapes.map((shape) => [shape.tension, ...shape.points]),
+                shapes.map((shape) => [shape.tension, shape.type, ...shape.points]),
               );
               updateHole(ctx);
               return;
@@ -146,7 +147,7 @@
             shape.tension += delta;
             shape.tension = parseFloat(shape.tension.toFixed(2));
             document.getElementById('hole').value = JSON.stringify(
-              shapes.map((shape) => [shape.tension, ...shape.points]),
+              shapes.map((shape) => [shape.tension, shape.type, ...shape.points]),
             );
             updateHole(ctx);
           }
@@ -171,7 +172,7 @@
                 if (pointInCircle([mouseX, mouseY], { position: anchor, radius: ANCHOR_SIZE })) {
                   shapes[i].points.splice(j * 2, 2);
                   document.getElementById('hole').value = JSON.stringify(
-                    shapes.map((shape) => [shape.tension, ...shape.points]),
+                    shapes.map((shape) => [shape.tension, shape.type, ...shape.points]),
                   );
                   updateHole(ctx);
                 }
@@ -191,7 +192,7 @@
             shapes[shapeDraggingIndex].points[anchorDraggingIndex * 2] = Math.round(mouseX);
             shapes[shapeDraggingIndex].points[anchorDraggingIndex * 2 + 1] = Math.round(mouseY);
             document.getElementById('hole').value = JSON.stringify(
-              shapes.map((shape) => [shape.tension, ...shape.points]),
+              shapes.map((shape) => [shape.tension, shape.type, ...shape.points]),
             );
           }
 
@@ -282,7 +283,8 @@
         let shapes = [];
         for (let shape of hole) {
           let tension = shape[0];
-          let points = shape.slice(1).map((p) => p);
+          let type = shape[1];
+          let points = shape.slice(2).map((p) => p);
           let spline = getSpline(points, tension);
           shapes.push({ tension: tension, points: points, spline: spline });
         }

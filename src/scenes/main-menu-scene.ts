@@ -82,8 +82,8 @@ export class MainMenuScene implements Scene {
     console.debug(`Scene ${this.name} ran for ${this.sceneTime}ms`);
   }
 
-  fixedTick(): void {
-    this.sceneTime += Settings.fixedDeltaTime * Settings.timeScale;
+  fixedTick(dt: number): void {
+    this.sceneTime += dt;
   }
 
   variableTick(): void {

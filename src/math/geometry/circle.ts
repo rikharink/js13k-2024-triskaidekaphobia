@@ -6,6 +6,10 @@ export interface Circle {
   radius: number;
 }
 
+export function isCircleInCircle(circle1: Circle, circle2: Circle): boolean {
+  return distance(circle1.position, circle2.position) <= circle1.radius + circle2.radius;
+}
+
 export function pointInCircle(point: Vector2, circle: Circle): boolean {
   return distance(point, circle.position) <= circle.radius;
 }

@@ -1,5 +1,5 @@
 import { ResourceManager } from '../managers/resource-manager';
-import { clamp } from '../math/util';
+import { clamp, lerp } from '../math/util';
 import { Sprite } from '../rendering/sprite';
 import { Background, onPush, Scene } from './scene';
 import { Camera } from '../rendering/camera';
@@ -14,9 +14,9 @@ import { fixedIntegerDigits } from '../util/util';
 import { Courses, Hole } from '../game/golf';
 import { calculateBoundingBox, drawSpline, getSpline, Spline } from '../math/geometry/spline';
 import { add, copy, reflect, scale, subtract, tangentToVector, Vector2 } from '../math/vector2';
-import { Circle, isCircleInAABB } from '../math/geometry/circle';
+import { Circle, isCircleInAABB, isCircleInCircle } from '../math/geometry/circle';
 import { drawCircle } from '../rendering/canvas';
-import { dbgCtx, getSpriteId, gl, keyboardManager } from '../game';
+import { dbgCtx, getSpriteId, gl, keyboardManager, pointerManager } from '../game';
 import { generateTextureFromCanvas } from '../textures/textures';
 import { calculateBezierBoundingBox, calculateTangent, findBezierCircleIntersections } from '../math/geometry/bezier';
 import { clearDebug, drawAABB } from '../debug/debug';
@@ -45,6 +45,9 @@ export class GameScene implements Scene {
   private _currentHoleSplineBoundingBoxes: AABB[] = [];
   private _ball: Sprite;
 
+  private _isShooting: boolean = false;
+  private _startShootingPosition: Vector2 = [0, 0];
+
   public constructor(sceneManager: SceneManager, resourceManager: ResourceManager) {
     this.sceneManager = sceneManager;
     this.resourceManager = resourceManager;
@@ -59,8 +62,9 @@ export class GameScene implements Scene {
     let ballPosition: Vector2 = [0, 0];
     copy(ballPosition, this._currentHole.start);
     add(ballPosition, ballPosition, this._currentHoleSprite.position);
-    this._ball = new Sprite(getSpriteId(), [8, 8], ballPosition, resourceManager.textures.get('ball')!);
-    this._ball.velocity = [4, 0];
+    this._ball = new Sprite(getSpriteId(), [16, 16], ballPosition, resourceManager.textures.get('ball')!);
+    this._ball.velocity = [0, 0];
+    this._ball.acceleration = [0, 0];
 
     this.sprites.push(this._currentHoleSprite, this._ball, ...this._ui.sprites);
   }
@@ -80,24 +84,40 @@ export class GameScene implements Scene {
     if (keyboardManager.hasKeyUp('KeyN')) {
       this.nextHole();
     }
+    if (!this._isShooting && pointerManager.hasPointerDown()) {
+      this._isShooting = true;
+      copy(this._startShootingPosition, pointerManager.getPointerLocation());
+    } else if (this._isShooting && pointerManager.hasPointerUp()) {
+      this._isShooting = false;
+      State.shots.set(State.hole, (State.shots.get(State.hole) ?? 0) + 1);
+      let end: Vector2 = pointerManager.getPointerLocation();
+      let velocity: Vector2 = [0, 0];
+      subtract(velocity, end, this._startShootingPosition);
+      scale(velocity, velocity, -Settings.velocityMultiplier);
+      this._ball.velocity = velocity;
+    } else if (this._isShooting) {
+      let end: Vector2 = pointerManager.getPointerLocation();
+      let distance: Vector2 = [0, 0];
+      subtract(distance, end, this._startShootingPosition);
+    }
   }
 
-  public fixedTick(): void {
+  public fixedTick(dt: number): void {
     if (dbgCtx !== null) {
       clearDebug(dbgCtx);
     }
 
     this._currentHoleLabel.text = this.getHoleText();
 
-    if (this._ball.velocity[0] === 0 && this._ball.velocity[1] === 0) {
-      return;
-    }
-
     const ballPosition: Vector2 = [0, 0];
     subtract(ballPosition, this._ball.position, this._currentHoleSprite.position);
-    const ball: Circle = { position: ballPosition, radius: 4 };
-
+    const ball: Circle = { position: ballPosition, radius: this._ball.size[0] / 2 };
     let isOutOfBounds = true;
+
+    //TODO: collision doesn't really work yet, maybe something with line thickness or moving it out of the line on collision
+    //TODO: maybe also not move it with the whole velocity but move it pixel by pixel and check for collisions in between
+    //TODO: collision response (dont stay in the line)
+    //TODO: maybe do out of bounds with raycasting so we also detect when we glitch inside of a shape?
 
     for (let i = 0; i < this._currentHoleSplines.length; i++) {
       let aabb = this._currentHoleSplineBoundingBoxes[i];
@@ -138,6 +158,7 @@ export class GameScene implements Scene {
             this._ball.velocity,
             tangentToVector([0, 0], calculateTangent(bezier, intersections[0][2])),
           );
+          scale(this._ball.velocity, this._ball.velocity, Settings.bounceFriction);
         }
       }
     }
@@ -145,10 +166,31 @@ export class GameScene implements Scene {
       copy(this._ball.position, this._currentHole.start);
       add(this._ball.position, this._ball.position, this._currentHoleSprite.position);
     }
-    add(this._ball.position, this._ball.position, this._ball.velocity);
+
+    // friction
+    scale(this._ball.velocity, this._ball.velocity, Settings.friction);
+
+    // SEMI IMPLICIT EULER
+    let tmp: Vector2 = [0, 0];
+    add(this._ball.velocity, this._ball.velocity, scale(tmp, this._ball.acceleration, dt));
+    add(this._ball.position, this._ball.position, scale(tmp, this._ball.velocity, dt));
+
+    // collision with finish
+    // TODO: do we want to only accept this on velocity [0, 0] or sufficiently small velocity?
+    const finishCircle: Circle = {
+      position: this._currentHole.finish,
+      radius: this.getHoleSize(),
+    };
+
+    if (isCircleInCircle(ball, finishCircle)) {
+      this.nextHole();
+    }
   }
 
   private nextHole() {
+    this._ball.velocity = [0, 0];
+    this._ball.acceleration = [0, 0];
+
     const currentCourse = getCurrentCourse();
     State.hole++;
     if (State.hole == currentCourse.holes.length) {
@@ -177,7 +219,7 @@ export class GameScene implements Scene {
     let splines: Spline[] = [];
     for (let shape of this._currentHole.design) {
       const tension = shape[0];
-      const points = shape.slice(1);
+      const points = shape.slice(2);
       splines.push(getSpline(points, tension));
     }
     let aabb = splines
@@ -230,8 +272,9 @@ export class GameScene implements Scene {
 
     const finish: Circle = {
       position: this._currentHole.finish,
-      radius: 5,
+      radius: this.getHoleSize(),
     };
+
     ctx.fillStyle = '#a6e3a1';
     drawCircle(ctx, finish);
 
@@ -243,7 +286,11 @@ export class GameScene implements Scene {
     return new Sprite(getSpriteId(), aabb.max, position, generateTextureFromCanvas(gl, canvas, aabb.max));
   }
 
+  private getHoleSize(): number {
+    return lerp(13, 3, State.hole / 12);
+  }
+
   private getHoleText(): string {
-    return `C${fixedIntegerDigits(State.course + 1, 2)}H${fixedIntegerDigits(State.hole + 1, 2)}P${fixedIntegerDigits(this._currentHole.par, 2)}`;
+    return `HOLE ${fixedIntegerDigits(State.hole + 1, 2)} SHOTS ${State.shots.get(State.hole) ?? 0}`;
   }
 }

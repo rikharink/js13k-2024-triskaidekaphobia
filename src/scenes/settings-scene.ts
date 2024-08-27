@@ -54,8 +54,8 @@ export class SettingsScene implements Scene {
     console.debug(`popped scene: ${this.name}`);
   }
 
-  fixedTick(): void {
-    this.sceneTime += Settings.fixedDeltaTime * Settings.timeScale;
+  fixedTick(dt: number): void {
+    this.sceneTime += dt;
   }
 
   variableTick(): void {

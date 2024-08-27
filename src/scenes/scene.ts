@@ -23,7 +23,7 @@ export interface Scene {
   sceneTime: number;
   onPush(): void;
   onPop(): void;
-  fixedTick(): void;
+  fixedTick(dt: number): void;
   variableTick(): void;
   sceneManager: SceneManager;
   resourceManager: ResourceManager;

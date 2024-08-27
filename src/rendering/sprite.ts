@@ -13,6 +13,7 @@ export class Sprite {
   size: Vector2;
   position: Vector2;
   velocity: Vector2 = [0, 0];
+  acceleration: Vector2 = [0, 0];
   rotation: Radian = 0;
   anchor: Vector2 = [0.5, 0.5];
   flipx: boolean = false;
